@@ -1,0 +1,2103 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Neil Fuller - Video Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      margin: 0;
+      padding: 24px;
+      color: #0f172a;
+    }
+    .page-wrap {
+      display: flex;
+      justify-content: center;
+    }
+    .viewer-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 24px 24px 32px;
+      width: 100%;
+      max-width: 980px;
+      box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.35),
+        0 0 0 1px rgba(148, 163, 184, 0.18);
+    }
+    .client-header {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #0f172a;
+    }
+    .client-subtitle {
+      margin-top: 4px;
+      margin-bottom: 20px;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .table-wrap {
+      margin-top: 8px;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+    }
+    thead {
+      background: #f1f5f9;
+    }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    td {
+      padding: 10px 14px;
+      vertical-align: middle;
+      border-bottom: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .thumb-cell {
+      width: 170px;
+    }
+    .thumb-wrapper {
+      display: inline-block;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
+      transform: translateZ(0);
+    }
+    .thumb-img {
+      display: block;
+      width: 160px;
+      height: auto;
+      cursor: pointer;
+      transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+    }
+    .thumb-img:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.45);
+    }
+    .info-cell {
+      width: auto;
+    }
+    .play-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #0f172a;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .play-link:hover .filename-text {
+      color: #0ea5e9;
+    }
+    .play-icon {
+      width: 24px;
+      height: 24px;
+      fill: #0ea5e9;
+      filter: drop-shadow(0 4px 8px rgba(14, 165, 233, 0.55));
+    }
+    .filename-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 360px;
+    }
+    .meta-line {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot-sep {
+      opacity: 0.7;
+    }
+    .share-cell {
+      width: 140px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .icon-button {
+      background: #0f172a;
+      border-radius: 999px;
+      border: none;
+      padding: 7px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.45);
+      transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, background 0.16s ease-out;
+    }
+    .icon-button:hover {
+      transform: translateY(-1px);
+      background: #020617;
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.6);
+    }
+    .share-icon,
+    .download-icon {
+      width: 18px;
+      height: 18px;
+      fill: #e5e7eb;
+    }
+    .download-button {
+      margin-left: 6px;
+    }
+    .site-footer {
+      margin-top: 18px;
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: right;
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    .overlay.visible {
+      display: flex;
+    }
+    .overlay-inner {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #020617;
+      z-index: 1;
+    }
+    .overlay-close {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 30px;
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 999px;
+      border: none;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    /* Back to top */
+    #backToTop {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 14px 30px rgba(14, 165, 233, 0.7);
+    }
+    #backToTop.visible {
+      display: inline-flex;
+    }
+    #backToTop svg {
+      width: 20px;
+      height: 20px;
+      fill: #e5e7eb;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    }
+    .toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+   /* -----------------------------------------
+   MOBILE LAYOUT (portrait phones)
+   ----------------------------------------- */
+@media (max-width: 650px) {
+
+  /* Turn each row into a stacked card */
+  tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 12px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  tbody tr td {
+    display: block;
+    width: 100%;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  /* Thumbnail stays at the top */
+  .thumb-cell {
+    width: 100% !important;
+  }
+  .thumb-wrapper {
+    width: 100%;
+    max-width: 260px;
+  }
+  .thumb-img {
+    width: 100%;
+    max-width: 260px;
+  }
+
+  /* Video info section */
+  .info-cell {
+    width: 100% !important;
+    margin-top: 6px;
+  }
+
+  .filename-text {
+    max-width: 100% !important;
+    white-space: normal;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  .meta-line {
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* Share/download buttons move under the info */
+  .share-cell {
+    width: 100% !important;
+    text-align: left !important;
+    margin-top: 10px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .icon-button {
+    padding: 8px 12px;
+  }
+
+  /* Hide table headers on mobile */
+  thead {
+    display: none;
+  }
+
+  /* Remove table look */
+  table {
+    border-collapse: separate;
+  }
+}
+
+
+  </style>
+</head>
+
+<body>
+  <div class="page-wrap">
+    <div class="viewer-card">
+      <h1 class="client-header">Neil Fuller</h1>
+      <div class="client-subtitle">Video Library</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Preview</th>
+              <th>Video</th>
+              <th style="text-align:right;">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/1994 _ England_ Scotland _ Wales Holiday.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/1994 _ England_ Scotland _ Wales Holiday.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./1994 - England, Scotland & Wales Holiday.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/4aj9q4jwc60tjn1orto9p/1994-England-Scotland-Wales-Holiday.mp4?rlkey=77cir6t75gi3a5ldeubqdrvoo"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">1994 - England, Scotland & Wales Holiday.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">7,357.01 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">03:12:39</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/4aj9q4jwc60tjn1orto9p/1994-England-Scotland-Wales-Holiday.mp4?rlkey=77cir6t75gi3a5ldeubqdrvoo&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/4aj9q4jwc60tjn1orto9p/1994-England-Scotland-Wales-Holiday.mp4?rlkey=77cir6t75gi3a5ldeubqdrvoo&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/2000 Team Announcement_ Footy Picks With Jars.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/2000 Team Announcement_ Footy Picks With Jars.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./2000 Team Announcement, Footy Picks With Jars.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/pefxepr0fu8yvioh3iw5m/2000-Team-Announcement-Footy-Picks-With-Jars.mp4?rlkey=yjptvn7j5e6gilbqyniziagke"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">2000 Team Announcement, Footy Picks With Jars.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,783.92 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:00:25</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/pefxepr0fu8yvioh3iw5m/2000-Team-Announcement-Footy-Picks-With-Jars.mp4?rlkey=yjptvn7j5e6gilbqyniziagke&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/pefxepr0fu8yvioh3iw5m/2000-Team-Announcement-Footy-Picks-With-Jars.mp4?rlkey=yjptvn7j5e6gilbqyniziagke&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/AIS 21st Birthday Compilations.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/AIS 21st Birthday Compilations.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./AIS 21st Birthday Compilations.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/jyfrotrulz8oleykbp2rd/AIS-21st-Birthday-Compilations.mp4?rlkey=zj8bpz7mc8b3lqdbvx0fswf94"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">AIS 21st Birthday Compilations.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">425.45 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:18:14</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/jyfrotrulz8oleykbp2rd/AIS-21st-Birthday-Compilations.mp4?rlkey=zj8bpz7mc8b3lqdbvx0fswf94&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/jyfrotrulz8oleykbp2rd/AIS-21st-Birthday-Compilations.mp4?rlkey=zj8bpz7mc8b3lqdbvx0fswf94&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Amputee Long Jump _ Men 18th August _ 1996 Paralympics.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Amputee Long Jump _ Men 18th August _ 1996 Paralympics.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Amputee Long Jump - Men 18th August - 1996 Paralympics.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/89u73mwktw1mr7jbw8hem/Amputee-Long-Jump-Men-18th-August-1996-Paralympics.mp4?rlkey=9h9op8pjz14tiqiyevprmcv5u"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Amputee Long Jump - Men 18th August - 1996 Paralympics.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">1,007.61 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:31:37</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/89u73mwktw1mr7jbw8hem/Amputee-Long-Jump-Men-18th-August-1996-Paralympics.mp4?rlkey=9h9op8pjz14tiqiyevprmcv5u&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/89u73mwktw1mr7jbw8hem/Amputee-Long-Jump-Men-18th-August-1996-Paralympics.mp4?rlkey=9h9op8pjz14tiqiyevprmcv5u&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Atlanta Paralympic Games _ Day 3_7.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Atlanta Paralympic Games _ Day 3_7.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Atlanta Paralympic Games - Day 3-7.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/dnjquhrv1ofse301dhx7t/Atlanta-Paralympic-Games-Day-3-7.mp4?rlkey=x50see2l5oe5wjynerng8fdqk"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Atlanta Paralympic Games - Day 3-7.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">5,056.17 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">02:45:50</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/dnjquhrv1ofse301dhx7t/Atlanta-Paralympic-Games-Day-3-7.mp4?rlkey=x50see2l5oe5wjynerng8fdqk&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/dnjquhrv1ofse301dhx7t/Atlanta-Paralympic-Games-Day-3-7.mp4?rlkey=x50see2l5oe5wjynerng8fdqk&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Atlanta Paralympic Games _ Day 8_9_10 _ Closing Ceremony.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Atlanta Paralympic Games _ Day 8_9_10 _ Closing Ceremony.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Atlanta Paralympic Games - Day 8,9,10 & Closing Ceremony.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/0gjc7u6qrehv89h5u1jf8/Atlanta-Paralympic-Games-Day-8-9-10-Closing-Ceremony.mp4?rlkey=khgn6yg81nopttu2oiz6e0i8j"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Atlanta Paralympic Games - Day 8,9,10 & Closing Ceremony.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">9,914.79 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">03:04:13</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/0gjc7u6qrehv89h5u1jf8/Atlanta-Paralympic-Games-Day-8-9-10-Closing-Ceremony.mp4?rlkey=khgn6yg81nopttu2oiz6e0i8j&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/0gjc7u6qrehv89h5u1jf8/Atlanta-Paralympic-Games-Day-8-9-10-Closing-Ceremony.mp4?rlkey=khgn6yg81nopttu2oiz6e0i8j&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Atlanta Paralympic Games _ Opening Ceremony_ Day 1_2.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Atlanta Paralympic Games _ Opening Ceremony_ Day 1_2.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Atlanta Paralympic Games - Opening Ceremony, Day 1-2.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/xf2jo1fq5x84jopjn7v0g/Atlanta-Paralympic-Games-Opening-Ceremony-Day-1-2.mp4?rlkey=zeutn0k7d4z8412xmvpfayf8a"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Atlanta Paralympic Games - Opening Ceremony, Day 1-2.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,805.28 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">02:46:55</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/xf2jo1fq5x84jopjn7v0g/Atlanta-Paralympic-Games-Opening-Ceremony-Day-1-2.mp4?rlkey=zeutn0k7d4z8412xmvpfayf8a&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/xf2jo1fq5x84jopjn7v0g/Atlanta-Paralympic-Games-Opening-Ceremony-Day-1-2.mp4?rlkey=zeutn0k7d4z8412xmvpfayf8a&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Bay Sheffield 1999.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Bay Sheffield 1999.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Bay Sheffield 1999.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/tn7nlpwo2be6w3n2wdd0p/Bay-Sheffield-1999.mp4?rlkey=rv7ebkad49m1d1p5v5vzl8q8k"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Bay Sheffield 1999.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">6,866.93 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:56:14</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/tn7nlpwo2be6w3n2wdd0p/Bay-Sheffield-1999.mp4?rlkey=rv7ebkad49m1d1p5v5vzl8q8k&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/tn7nlpwo2be6w3n2wdd0p/Bay-Sheffield-1999.mp4?rlkey=rv7ebkad49m1d1p5v5vzl8q8k&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Commercial.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Commercial.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Commercial.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/alwykfgp4yymwrg7piy8g/Commercial.mp4?rlkey=i5cc1lfajcq4p1mkjkphoe8w0"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Commercial.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">15.13 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:00:30</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/alwykfgp4yymwrg7piy8g/Commercial.mp4?rlkey=i5cc1lfajcq4p1mkjkphoe8w0&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/alwykfgp4yymwrg7piy8g/Commercial.mp4?rlkey=i5cc1lfajcq4p1mkjkphoe8w0&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Flex Foot _ 1997 Ultimate Challenge.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Flex Foot _ 1997 Ultimate Challenge.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Flex Foot - 1997 Ultimate Challenge.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/4eou5or4297bew6r6c3sr/Flex-Foot-1997-Ultimate-Challenge.mp4?rlkey=vulf2jdmh1lmudhat2oqw3fbv"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Flex Foot - 1997 Ultimate Challenge.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">351.59 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:09:58</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/4eou5or4297bew6r6c3sr/Flex-Foot-1997-Ultimate-Challenge.mp4?rlkey=vulf2jdmh1lmudhat2oqw3fbv&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/4eou5or4297bew6r6c3sr/Flex-Foot-1997-Ultimate-Challenge.mp4?rlkey=vulf2jdmh1lmudhat2oqw3fbv&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Flex_Foot Inc _ A Life Without Limitations.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Flex_Foot Inc _ A Life Without Limitations.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Flex-Foot Inc - A Life Without Limitations.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/ydomny3wqi6wvzwco5it7/Flex-Foot-Inc-A-Life-Without-Limitations.mp4?rlkey=9ku9xl58no1melp5fo7qojrl8"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Flex-Foot Inc - A Life Without Limitations.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">379.50 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:10:53</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/ydomny3wqi6wvzwco5it7/Flex-Foot-Inc-A-Life-Without-Limitations.mp4?rlkey=9ku9xl58no1melp5fo7qojrl8&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/ydomny3wqi6wvzwco5it7/Flex-Foot-Inc-A-Life-Without-Limitations.mp4?rlkey=9ku9xl58no1melp5fo7qojrl8&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Germany 1994.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Germany 1994.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Germany 1994.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/2lcfbiilsn8sxnytgzqqt/Germany-1994.mp4?rlkey=ywax1t7my3gp3fpzy177klbtq"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Germany 1994.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">7,963.25 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">02:55:16</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/2lcfbiilsn8sxnytgzqqt/Germany-1994.mp4?rlkey=ywax1t7my3gp3fpzy177klbtq&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/2lcfbiilsn8sxnytgzqqt/Germany-1994.mp4?rlkey=ywax1t7my3gp3fpzy177klbtq&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Graham _ Jackies Wedding 1992.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Graham _ Jackies Wedding 1992.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Graham & Jackies Wedding 1992.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/sa03telij8t7wl5jb4xzd/Graham-Jackies-Wedding-1992.mp4?rlkey=32elryokxr02un4dhwlt1w4qk"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Graham & Jackies Wedding 1992.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,890.84 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:21:52</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/sa03telij8t7wl5jb4xzd/Graham-Jackies-Wedding-1992.mp4?rlkey=32elryokxr02un4dhwlt1w4qk&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/sa03telij8t7wl5jb4xzd/Graham-Jackies-Wedding-1992.mp4?rlkey=32elryokxr02un4dhwlt1w4qk&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Neil Fuller _ Master Copy.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Neil Fuller _ Master Copy.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Neil Fuller - Master Copy.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/p1oknj963ff2gun2ts4hm/Neil-Fuller-Master-Copy.mp4?rlkey=j684lvgm6hjm1itturxpak6kk"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Neil Fuller - Master Copy.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,165.25 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:47:55</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/p1oknj963ff2gun2ts4hm/Neil-Fuller-Master-Copy.mp4?rlkey=j684lvgm6hjm1itturxpak6kk&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/p1oknj963ff2gun2ts4hm/Neil-Fuller-Master-Copy.mp4?rlkey=j684lvgm6hjm1itturxpak6kk&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Neil Fuller _ Promotional Video.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Neil Fuller _ Promotional Video.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Neil Fuller - Promotional Video.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/vdiq2ongw6pvu1vtifavv/Neil-Fuller-Promotional-Video.mp4?rlkey=p56qrlycyas219tx0t56soj48"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Neil Fuller - Promotional Video.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">37.42 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:01:06</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/vdiq2ongw6pvu1vtifavv/Neil-Fuller-Promotional-Video.mp4?rlkey=p56qrlycyas219tx0t56soj48&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/vdiq2ongw6pvu1vtifavv/Neil-Fuller-Promotional-Video.mp4?rlkey=p56qrlycyas219tx0t56soj48&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Neil Fuller Video 1.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Neil Fuller Video 1.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Neil Fuller Video 1.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/47woh0lpx79t91o96winl/Neil-Fuller-Video-1.mp4?rlkey=t6d7j63etvl7p43oxaj9zzfb0"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Neil Fuller Video 1.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">292.58 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:05:38</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/47woh0lpx79t91o96winl/Neil-Fuller-Video-1.mp4?rlkey=t6d7j63etvl7p43oxaj9zzfb0&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/47woh0lpx79t91o96winl/Neil-Fuller-Video-1.mp4?rlkey=t6d7j63etvl7p43oxaj9zzfb0&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Nexus Series 1 _ Episode 126 _ 2002.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Nexus Series 1 _ Episode 126 _ 2002.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Nexus Series 1 - Episode 126 - 2002.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/2y6y8vg7naam04cw5ubye/Nexus-Series-1-Episode-126-2002.mp4?rlkey=3a6bzy15uhyrrhyib2drxvp82"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Nexus Series 1 - Episode 126 - 2002.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">658.95 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:27:59</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/2y6y8vg7naam04cw5ubye/Nexus-Series-1-Episode-126-2002.mp4?rlkey=3a6bzy15uhyrrhyib2drxvp82&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/2y6y8vg7naam04cw5ubye/Nexus-Series-1-Episode-126-2002.mp4?rlkey=3a6bzy15uhyrrhyib2drxvp82&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/One To One Challenge _ Toronto 1997.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/One To One Challenge _ Toronto 1997.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./One To One Challenge - Toronto 1997.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/7p8q17psc8nn046o24i8q/One-To-One-Challenge-Toronto-1997.mp4?rlkey=xk8xsrtwlll90ge37id0wuoag"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">One To One Challenge - Toronto 1997.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,334.45 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:02:40</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/7p8q17psc8nn046o24i8q/One-To-One-Challenge-Toronto-1997.mp4?rlkey=xk8xsrtwlll90ge37id0wuoag&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/7p8q17psc8nn046o24i8q/One-To-One-Challenge-Toronto-1997.mp4?rlkey=xk8xsrtwlll90ge37id0wuoag&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/OSSUR Athlete Bio _ Neil Fuller.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/OSSUR Athlete Bio _ Neil Fuller.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./OSSUR Athlete Bio - Neil Fuller.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/w68q1wx8n5breqdz57sf1/OSSUR-Athlete-Bio-Neil-Fuller.mp4?rlkey=y3ebsn1hw8u31s32z525io3mu"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">OSSUR Athlete Bio - Neil Fuller.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">61.66 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:02:26</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/w68q1wx8n5breqdz57sf1/OSSUR-Athlete-Bio-Neil-Fuller.mp4?rlkey=y3ebsn1hw8u31s32z525io3mu&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/w68q1wx8n5breqdz57sf1/OSSUR-Athlete-Bio-Neil-Fuller.mp4?rlkey=y3ebsn1hw8u31s32z525io3mu&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Para Hills U14_s vs Adel Hills_ 4x100 Relay Barcelona 1992.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Para Hills U14_s vs Adel Hills_ 4x100 Relay Barcelona 1992.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Para Hills U14's vs Adel Hills, 4x100 Relay Barcelona 1992.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/3xa7mwsw1536toj684wc4/Para-Hills-U14-s-vs-Adel-Hills-4x100-Relay-Barcelona-1992.mp4?rlkey=8stqycppnl4qg7jy135pmvcpo"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Para Hills U14's vs Adel Hills, 4x100 Relay Barcelona 1992.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,256.74 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:55:33</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/3xa7mwsw1536toj684wc4/Para-Hills-U14-s-vs-Adel-Hills-4x100-Relay-Barcelona-1992.mp4?rlkey=8stqycppnl4qg7jy135pmvcpo&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/3xa7mwsw1536toj684wc4/Para-Hills-U14-s-vs-Adel-Hills-4x100-Relay-Barcelona-1992.mp4?rlkey=8stqycppnl4qg7jy135pmvcpo&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Paralympic Games _ Sydney 2000 _ One Year To Go Highlights.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Paralympic Games _ Sydney 2000 _ One Year To Go Highlights.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Paralympic Games - Sydney 2000 - One Year To Go Highlights.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/tjrzgwp4uju1agkpdla4m/Paralympic-Games-Sydney-2000-One-Year-To-Go-Highlights.mp4?rlkey=zx850ru9rzp49p59prbqgrag9"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Paralympic Games - Sydney 2000 - One Year To Go Highlights.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">319.11 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:10:06</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/tjrzgwp4uju1agkpdla4m/Paralympic-Games-Sydney-2000-One-Year-To-Go-Highlights.mp4?rlkey=zx850ru9rzp49p59prbqgrag9&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/tjrzgwp4uju1agkpdla4m/Paralympic-Games-Sydney-2000-One-Year-To-Go-Highlights.mp4?rlkey=zx850ru9rzp49p59prbqgrag9&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Paralympics _ October 2000.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Paralympics _ October 2000.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Paralympics - October 2000.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/7aql8xb1srliwu1s4nxoh/Paralympics-October-2000.mp4?rlkey=orkn5qm0g57svjc02vy2026pp"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Paralympics - October 2000.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">7,569.46 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">02:04:33</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/7aql8xb1srliwu1s4nxoh/Paralympics-October-2000.mp4?rlkey=orkn5qm0g57svjc02vy2026pp&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/7aql8xb1srliwu1s4nxoh/Paralympics-October-2000.mp4?rlkey=orkn5qm0g57svjc02vy2026pp&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Paralympics 1992_ Revival 1993_ IPC World Championships 1994_ Revival 1995.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Paralympics 1992_ Revival 1993_ IPC World Championships 1994_ Revival 1995.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Paralympics 1992, Revival 1993, IPC World Championships 1994, Revival 1995.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/jsnw9mqbuqv90l0yjaxhq/Paralympics-1992-Revival-1993-IPC-World-Championships-1994-Revival-1995.mp4?rlkey=srvmv2a51w1dajkpaghbtk2sz"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Paralympics 1992, Revival 1993, IPC World Championships 1994, Revival 1995.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,180.63 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:33:15</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/jsnw9mqbuqv90l0yjaxhq/Paralympics-1992-Revival-1993-IPC-World-Championships-1994-Revival-1995.mp4?rlkey=srvmv2a51w1dajkpaghbtk2sz&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/jsnw9mqbuqv90l0yjaxhq/Paralympics-1992-Revival-1993-IPC-World-Championships-1994-Revival-1995.mp4?rlkey=srvmv2a51w1dajkpaghbtk2sz&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Paralympics Revival _ Duderstadt 1999.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Paralympics Revival _ Duderstadt 1999.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Paralympics Revival - Duderstadt 1999.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/06g4hsvl9weu320vkhwlz/Paralympics-Revival-Duderstadt-1999.mp4?rlkey=58wp0bwm1bk4u322mxb8t5v5t"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Paralympics Revival - Duderstadt 1999.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">245.43 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:07:25</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/06g4hsvl9weu320vkhwlz/Paralympics-Revival-Duderstadt-1999.mp4?rlkey=58wp0bwm1bk4u322mxb8t5v5t&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/06g4hsvl9weu320vkhwlz/Paralympics-Revival-Duderstadt-1999.mp4?rlkey=58wp0bwm1bk4u322mxb8t5v5t&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Paramates Episode 7 _ Neil Fuller.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Paramates Episode 7 _ Neil Fuller.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Paramates Episode 7 - Neil Fuller.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/0rlqpfoksqcx992ywigl1/Paramates-Episode-7-Neil-Fuller.mp4?rlkey=snklaskoeddqihjphxnj28xvw"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Paramates Episode 7 - Neil Fuller.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">152.98 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:03:50</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/0rlqpfoksqcx992ywigl1/Paramates-Episode-7-Neil-Fuller.mp4?rlkey=snklaskoeddqihjphxnj28xvw&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/0rlqpfoksqcx992ywigl1/Paramates-Episode-7-Neil-Fuller.mp4?rlkey=snklaskoeddqihjphxnj28xvw&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Power_ Passion_ Performance _ Sydney 2000 Paralympic Games.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Power_ Passion_ Performance _ Sydney 2000 Paralympic Games.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Power, Passion, Performance - Sydney 2000 Paralympic Games.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/3n0zfinzhmiyqezy1i1yg/Power-Passion-Performance-Sydney-2000-Paralympic-Games.mp4?rlkey=wdjdj3wn98cwwvgmxfe1zbvog"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Power, Passion, Performance - Sydney 2000 Paralympic Games.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">162.38 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:05:02</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/3n0zfinzhmiyqezy1i1yg/Power-Passion-Performance-Sydney-2000-Paralympic-Games.mp4?rlkey=wdjdj3wn98cwwvgmxfe1zbvog&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/3n0zfinzhmiyqezy1i1yg/Power-Passion-Performance-Sydney-2000-Paralympic-Games.mp4?rlkey=wdjdj3wn98cwwvgmxfe1zbvog&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Stawell Gift 2008.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Stawell Gift 2008.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Stawell Gift 2008.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/p02aj7oevxa06zo9rfhkj/Stawell-Gift-2008.mp4?rlkey=ytk54k2pnor8rqsdtzbscdv6m"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Stawell Gift 2008.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,428.53 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:59:30</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/p02aj7oevxa06zo9rfhkj/Stawell-Gift-2008.mp4?rlkey=ytk54k2pnor8rqsdtzbscdv6m&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/p02aj7oevxa06zo9rfhkj/Stawell-Gift-2008.mp4?rlkey=ytk54k2pnor8rqsdtzbscdv6m&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Sydney 2000 _ 4x400m_ 800m_ 400m Semi.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Sydney 2000 _ 4x400m_ 800m_ 400m Semi.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Sydney 2000 - 4x400m, 800m, 400m Semi.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/htk3we4irdrzp8y22b061/Sydney-2000-4x400m-800m-400m-Semi.mp4?rlkey=2geul36dxlhvjecv8bdzs3j4y"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Sydney 2000 - 4x400m, 800m, 400m Semi.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">1,096.24 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:25:17</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/htk3we4irdrzp8y22b061/Sydney-2000-4x400m-800m-400m-Semi.mp4?rlkey=2geul36dxlhvjecv8bdzs3j4y&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/htk3we4irdrzp8y22b061/Sydney-2000-4x400m-800m-400m-Semi.mp4?rlkey=2geul36dxlhvjecv8bdzs3j4y&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Sydney 2000 _ Paralympic Games 18_29 October.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Sydney 2000 _ Paralympic Games 18_29 October.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Sydney 2000 - Paralympic Games 18-29 October.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/kckaeuhb9xv2wx9oiuk1k/Sydney-2000-Paralympic-Games-18-29-October.mp4?rlkey=ffy5h74h0kp2f2jkgeyy61c2o"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Sydney 2000 - Paralympic Games 18-29 October.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">83.43 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:02:08</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/kckaeuhb9xv2wx9oiuk1k/Sydney-2000-Paralympic-Games-18-29-October.mp4?rlkey=ffy5h74h0kp2f2jkgeyy61c2o&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/kckaeuhb9xv2wx9oiuk1k/Sydney-2000-Paralympic-Games-18-29-October.mp4?rlkey=ffy5h74h0kp2f2jkgeyy61c2o&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Sydney 2000 _ Speakers Video _ Best Athletes In The World.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Sydney 2000 _ Speakers Video _ Best Athletes In The World.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Sydney 2000 - Speakers Video - Best Athletes In The World.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/lod5d0pmaf1rxs63rid4n/Sydney-2000-Speakers-Video-Best-Athletes-In-The-World.mp4?rlkey=12tsrl52e83u0jouz72z9pshj"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Sydney 2000 - Speakers Video - Best Athletes In The World.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">133.85 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:04:59</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/lod5d0pmaf1rxs63rid4n/Sydney-2000-Speakers-Video-Best-Athletes-In-The-World.mp4?rlkey=12tsrl52e83u0jouz72z9pshj&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/lod5d0pmaf1rxs63rid4n/Sydney-2000-Speakers-Video-Best-Athletes-In-The-World.mp4?rlkey=12tsrl52e83u0jouz72z9pshj&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/World Champs Day 2.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/World Champs Day 2.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./World Champs Day 2.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/1005zijdakl4lmbaaetwq/World-Champs-Day-2.mp4?rlkey=lf32o1zsd0hju6ypvoo8g88df"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">World Champs Day 2.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,231.64 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:21:40</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/1005zijdakl4lmbaaetwq/World-Champs-Day-2.mp4?rlkey=lf32o1zsd0hju6ypvoo8g88df&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/1005zijdakl4lmbaaetwq/World-Champs-Day-2.mp4?rlkey=lf32o1zsd0hju6ypvoo8g88df&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="site-footer">
+        Video Digitisation Services | Ph: 0411 657 799
+      </footer>
+    </div>
+  </div>
+
+  <div class="overlay" id="videoOverlay" onclick="overlayBackgroundClick(event)">
+    <div class="overlay-inner" onclick="event.stopPropagation()"></div>
+  </div>
+
+  <div class="toast" id="toast">Link copied!</div>
+
+  <button id="backToTop" onclick="scrollToTop()">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 4l-7 8h4v8h6v-8h4z"/>
+    </svg>
+  </button>
+
+  <script>
+function isLocalContext() {
+  return window.location.protocol === 'file:';
+}
+
+function downloadFromDropbox(el) {
+  if (isLocalContext()) {
+    showToast("File already on USB");
+    return;
+  }
+
+  const url = el.getAttribute('data-dropbox-download');
+  window.open(url, '_blank');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (isLocalContext()) {
+    document.querySelectorAll('.download-button').forEach(btn => {
+      btn.style.display = 'none';
+    });
+  }
+});
+function openImageFromThumb(el) {
+  const src = el.getAttribute('data-thumb');
+  const overlay = document.getElementById('videoOverlay');
+  const inner = overlay.querySelector('.overlay-inner');
+
+  inner.innerHTML = `
+    <button class="overlay-close" onclick="closeOverlay()">×</button>
+    <img src="${src}" style="max-width:100%; max-height:100%; display:block;">
+  `;
+
+  overlay.classList.add('visible');
+}
+
+function openVideoFromLink(el) {
+  const overlay = document.getElementById('videoOverlay');
+  const inner = overlay.querySelector('.overlay-inner');
+
+  const localUrl = el.getAttribute('data-local');
+  const dropboxUrl = el.getAttribute('data-dropbox');
+
+  const src = isLocalContext() ? localUrl : dropboxUrl;
+
+  inner.innerHTML = `
+    <button class="overlay-close" onclick="closeOverlay()">×</button>
+    <video controls autoplay style="max-width:100%; max-height:100%; display:block;">
+      <source src="${src}" type="video/mp4">
+    </video>
+  `;
+
+  overlay.classList.add('visible');
+}
+
+function closeOverlay() {
+  const overlay = document.getElementById('videoOverlay');
+  const inner = overlay.querySelector('.overlay-inner');
+  inner.innerHTML = "";
+  overlay.classList.remove('visible');
+}
+
+function overlayBackgroundClick(event) {
+  if (event.target.id === 'videoOverlay') {
+    closeOverlay();
+  }
+}
+
+function copyShareLinkFromButton(el) {
+  const url = el.getAttribute('data-dropbox');
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Link copied!");
+  });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 1800);
+}
+</script>
+
+</body>
+</html>
